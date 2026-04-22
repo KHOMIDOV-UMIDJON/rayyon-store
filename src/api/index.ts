@@ -1,6 +1,15 @@
 import api from '../lib/axios'
 import type { ApiResponse, AuthUser, Order, StoreInfo, StaffMember } from '../types'
 
+export interface Driver {
+    id: string
+    fullName: string
+    phone: string
+    isActive: boolean
+    activeOrderCount: number
+    distanceKm?: number
+}
+
 export const authApi = {
     login: async (data: { username: string; password: string; deviceId: string }): Promise<AuthUser> => {
         const res = await api.post<ApiResponse<AuthUser>>('/auth/login/web', data)
@@ -48,9 +57,28 @@ export const storeApi = {
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
+    assignCollector: async (orderId: string, collectorId: string): Promise<Order> => {
+        const res = await api.put<ApiResponse<Order>>(
+            `/store/orders/${orderId}/assign-collector?collectorId=${collectorId}`
+        )
+        if (!res.data.success || !res.data.data) throw new Error(res.data.message)
+        return res.data.data
+    },
+    assignDriver: async (orderId: string, driverId: string): Promise<Order> => {
+        const res = await api.put<ApiResponse<Order>>(
+            `/store/orders/${orderId}/assign-driver?driverId=${driverId}`
+        )
+        if (!res.data.success || !res.data.data) throw new Error(res.data.message)
+        return res.data.data
+    },
     getStaff: async (): Promise<StaffMember[]> => {
         const res = await api.get<ApiResponse<StaffMember[]>>('/store/staff')
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
+    },
+    getDrivers: async (): Promise<Driver[]> => {
+        const res = await api.get<ApiResponse<Driver[]>>('/store/drivers')
+        if (!res.data.success) throw new Error(res.data.message)
+        return res.data.data ?? []
     },
 }

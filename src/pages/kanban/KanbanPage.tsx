@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { AxiosError } from 'axios'
 import { RefreshCw } from 'lucide-react'
 import { storeApi } from '../../api'
 import Toast from '../../components/ui/Toast'
@@ -13,7 +14,8 @@ const COLUMNS: {
     { status: 'CONFIRMED',        label: 'New orders', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
     { status: 'PREPARING',        label: 'Preparing',  color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
     { status: 'READY_FOR_PICKUP', label: 'Ready',      color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { status: 'COURIER_ASSIGNED', label: 'Picked up',  color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+    { status: 'COURIER_ASSIGNED', label: 'Picked up',  color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+    { status: 'DELIVERED',        label: 'Delivered',  color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
 ]
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -41,15 +43,16 @@ function OrderCard({ order, onAction }: {
     const col = COLUMNS.find(c => c.status === order.status)
 
     const nextAction =
-        order.status === 'CONFIRMED'        ? { label: 'Start preparing', action: 'prepare' }
-            : order.status === 'PREPARING'      ? { label: 'Mark as ready',   action: 'ready'   }
-                : order.status === 'READY_FOR_PICKUP' ? { label: 'Confirm pickup', action: 'complete' }
+        order.status === 'CONFIRMED'          ? { label: 'Start preparing',   action: 'prepare'  }
+            : order.status === 'PREPARING'        ? { label: 'Mark as ready',     action: 'ready'    }
+                : order.status === 'READY_FOR_PICKUP' ? { label: 'Confirm pickup',    action: 'complete' }
                     : null
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-sm transition-shadow"
-             style={{ borderLeft: `3px solid ${col?.color ?? '#e5e7eb'}` }}>
-            {/* Card header */}
+        <div
+            className="bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-sm transition-shadow"
+            style={{ borderLeft: `3px solid ${col?.color ?? '#e5e7eb'}` }}
+        >
             <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-50">
         <span className="font-mono text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
           #{order.orderId.slice(0, 8)}
@@ -59,11 +62,10 @@ function OrderCard({ order, onAction }: {
           ⏱ {fmtWait(wait)}
         </span>
             </div>
-            {/* Card body */}
             <div className="px-3 py-2.5">
                 <div className="text-[12px] font-semibold text-gray-900 mb-0.5">{order.customerName}</div>
                 <div className="text-[11px] text-gray-400 mb-2 truncate">{order.deliveryAddress}</div>
-                <div className="flex flex-wrap gap-1 mb-2.5">
+                <div className="flex flex-wrap gap-1 mb-2">
                     {order.items?.slice(0, 2).map((item, i) => (
                         <span key={i} className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
               {item.productName} ×{item.quantity}
@@ -73,6 +75,27 @@ function OrderCard({ order, onAction }: {
                         <span className="text-[10px] text-gray-400">+{order.items.length - 2} more</span>
                     )}
                 </div>
+
+                {/* Collector badge */}
+                {order.collectorName && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[8px] font-bold text-green-700 flex-shrink-0">
+                            {order.collectorName.split(' ').map(n => n[0]).join('').slice(0,2)}
+                        </div>
+                        <span className="text-[10px] text-green-700 font-medium">{order.collectorName}</span>
+                    </div>
+                )}
+
+                {/* Driver badge */}
+                {order.driverName && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-[8px] font-bold text-blue-700 flex-shrink-0">
+                            {order.driverName.split(' ').map(n => n[0]).join('').slice(0,2)}
+                        </div>
+                        <span className="text-[10px] text-blue-700 font-medium">{order.driverName}</span>
+                    </div>
+                )}
+
                 <div className="flex items-center justify-between mb-2">
                     <span className="text-[12px] font-bold text-gray-900">{fmtMoney(order.totalAmount)} UZS</span>
                     <span className="text-[10px] text-brand font-medium">{PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}</span>
@@ -80,7 +103,8 @@ function OrderCard({ order, onAction }: {
                 {nextAction && (
                     <button
                         onClick={e => { e.stopPropagation(); onAction(order.orderId, nextAction.action) }}
-                        className="w-full py-1.5 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-green-700 transition-colors">
+                        className="w-full py-1.5 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-green-700 transition-colors"
+                    >
                         {nextAction.label}
                     </button>
                 )}
@@ -111,20 +135,18 @@ export default function KanbanPage() {
             void queryClient.invalidateQueries({ queryKey: ['store-orders'] })
             setToast({ message: 'Order updated!', type: 'success' })
         },
-        onError: (err: any) =>
-            setToast({ message: err?.response?.data?.message ?? 'Failed to update', type: 'error' }),
+        onError: (err: AxiosError<{message: string}>) =>
+            setToast({ message: err?.response?.data?.message ?? 'Failed', type: 'error' }),
     })
 
-    const urgent = orders.filter(o => getWaitSeconds(o) > 300).length
-    const active = orders.filter(o =>
-        ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP'].includes(o.status)
-    ).length
+    const activeStatuses: OrderStatus[] = ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'COURIER_ASSIGNED']
+    const active = orders.filter(o => activeStatuses.includes(o.status)).length
+    const urgent = orders.filter(o => getWaitSeconds(o) > 300 && activeStatuses.includes(o.status)).length
 
     return (
         <div className="flex flex-col flex-1 overflow-hidden">
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            {/* Header */}
             <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 flex-shrink-0">
                 <div>
                     <h1 className="text-[15px] font-semibold text-gray-900">Live order board</h1>
@@ -139,12 +161,9 @@ export default function KanbanPage() {
                 </button>
             </div>
 
-            {/* Board */}
             <div className="flex-1 overflow-x-auto p-4">
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-full text-[13px] text-gray-400">
-                        Loading orders...
-                    </div>
+                    <div className="flex items-center justify-center h-full text-[13px] text-gray-400">Loading orders...</div>
                 ) : (
                     <div className="flex gap-4 h-full min-w-max">
                         {COLUMNS.map(col => {
@@ -153,21 +172,17 @@ export default function KanbanPage() {
                                 .sort((a, b) => getWaitSeconds(b) - getWaitSeconds(a))
                             return (
                                 <div key={col.status} className="w-72 flex flex-col flex-shrink-0">
-                                    {/* Column header */}
                                     <div className="flex items-center justify-between px-3 py-2 rounded-xl mb-3"
                                          style={{ background: col.bg, border: `1px solid ${col.border}` }}>
                                         <div className="flex items-center gap-2">
                                             <span className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-                                            <span className="text-[12px] font-semibold" style={{ color: col.color }}>
-                        {col.label}
-                      </span>
+                                            <span className="text-[12px] font-semibold" style={{ color: col.color }}>{col.label}</span>
                                         </div>
                                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-full"
                                               style={{ background: col.color + '20', color: col.color }}>
                       {colOrders.length}
                     </span>
                                     </div>
-                                    {/* Cards */}
                                     <div className="flex flex-col gap-2 overflow-y-auto flex-1 pb-2">
                                         {colOrders.length === 0 ? (
                                             <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-gray-100 text-[12px] text-gray-300">

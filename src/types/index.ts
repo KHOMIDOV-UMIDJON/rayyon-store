@@ -49,6 +49,8 @@ export interface Order {
     dispatcherName?: string
     assignedDriverId?: string
     driverName?: string
+    collectorId?: string
+    collectorName?: string
     createdAt: string
     updatedAt: string
     waitSeconds?: number
@@ -71,4 +73,5 @@ export interface StaffMember {
     phone: string
     isActive: boolean
     username: string
+    activeOrderCount?: number
 }
