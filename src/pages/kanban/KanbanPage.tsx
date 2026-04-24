@@ -17,13 +17,16 @@ import { EMPTY_FILTERS } from '../../types'
 import type { Order, OrderStatus, OrderFilters, UrgencyTier } from '../../types'
 
 const COLUMNS: {
-    status: OrderStatus; label: string
-    color: string; bg: string; border: string
+    status: OrderStatus
+    label: string
+    color: string
+    bg: string
+    border: string
 }[] = [
-    { status: 'CONFIRMED',        label: 'New orders', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-    { status: 'PREPARING',        label: 'Preparing',  color: '#f97316', bg: '#fff7ed', border: '#fed7aa' },
-    { status: 'READY_FOR_PICKUP', label: 'Ready',      color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' },
-    { status: 'COURIER_ASSIGNED', label: 'Picked up',  color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+    { status: 'CONFIRMED',        label: 'New orders', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+    { status: 'PREPARING',        label: 'Preparing',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+    { status: 'READY_FOR_PICKUP', label: 'Ready',      color: '#0F6E56', bg: '#E1F5EE', border: '#9FE1CB' },
+    { status: 'COURIER_ASSIGNED', label: 'Picked up',  color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
     { status: 'DELIVERED',        label: 'Delivered',  color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
 ]
 
@@ -55,21 +58,21 @@ function OrderCard({ order, onAction }: {
             className="bg-white rounded-xl border border-gray-100 overflow-hidden cursor-pointer hover:shadow-sm transition-shadow"
             style={{ borderLeft: `3px solid ${col?.color ?? '#e5e7eb'}` }}
         >
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-50">
-                <span className="font-mono text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+            <div className="flex items-center gap-2 px-2.5 py-2 border-b border-gray-50">
+                <span className="font-mono text-[10px] font-bold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded flex-shrink-0">
                     #{order.orderId.slice(0, 8)}
                 </span>
-                <span className="text-[10px] text-gray-400 flex-1 truncate">{order.storeName}</span>
-                <span className={`text-[10px] font-bold ${urgency.text}`}>
+                <span className="text-[10px] text-gray-400 flex-1 truncate min-w-0">{order.storeName}</span>
+                <span className={`text-[10px] font-bold whitespace-nowrap ${urgency.text}`}>
                     ⏱ {formatWait(wait)}
                 </span>
             </div>
-            <div className="px-3 py-2.5">
-                <div className="text-[12px] font-semibold text-gray-900 mb-0.5">{order.customerName}</div>
+            <div className="px-2.5 py-2.5">
+                <div className="text-[12px] font-semibold text-gray-900 mb-0.5 truncate">{order.customerName}</div>
                 <div className="text-[11px] text-gray-400 mb-2 truncate">{order.deliveryAddress}</div>
                 <div className="flex flex-wrap gap-1 mb-2">
                     {order.items?.slice(0, 2).map((item, i) => (
-                        <span key={i} className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100">
+                        <span key={i} className="text-[10px] bg-gray-50 text-gray-500 px-1.5 py-0.5 rounded border border-gray-100 truncate max-w-full">
                             {item.productName} ×{item.quantity}
                         </span>
                     ))}
@@ -79,33 +82,33 @@ function OrderCard({ order, onAction }: {
                 </div>
 
                 {order.collectorName && (
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[8px] font-bold text-green-700 flex-shrink-0">
+                    <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[8px] font-bold text-brand-dark flex-shrink-0">
                             {order.collectorName.split(' ').map(n => n[0]).join('').slice(0,2)}
                         </div>
-                        <span className="text-[10px] text-green-700 font-medium">{order.collectorName}</span>
+                        <span className="text-[10px] text-brand-dark font-medium truncate">{order.collectorName}</span>
                     </div>
                 )}
 
                 {order.driverName && (
-                    <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
                         <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-[8px] font-bold text-blue-700 flex-shrink-0">
                             {order.driverName.split(' ').map(n => n[0]).join('').slice(0,2)}
                         </div>
-                        <span className="text-[10px] text-blue-700 font-medium">{order.driverName}</span>
+                        <span className="text-[10px] text-blue-700 font-medium truncate">{order.driverName}</span>
                     </div>
                 )}
 
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[12px] font-bold text-gray-900">{fmtMoney(order.totalAmount)} UZS</span>
-                    <span className="text-[10px] text-brand font-medium">
+                <div className="flex items-center justify-between mb-2 gap-2">
+                    <span className="text-[12px] font-bold text-gray-900 truncate">{fmtMoney(order.totalAmount)} UZS</span>
+                    <span className="text-[10px] text-brand font-medium flex-shrink-0">
                         {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod}
                     </span>
                 </div>
                 {nextAction && (
                     <button
                         onClick={e => { e.stopPropagation(); onAction(order.orderId, nextAction.action) }}
-                        className="w-full py-1.5 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-green-700 transition-colors"
+                        className="w-full py-1.5 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-brand-dark transition-colors"
                     >
                         {nextAction.label}
                     </button>
@@ -191,37 +194,37 @@ export default function KanbanPage() {
                     />
                 </div>
 
-                <div className="flex-1 overflow-x-auto px-4 pb-4">
+                <div className="flex-1 overflow-hidden px-4 pb-4">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full text-[13px] text-gray-400">
                             Loading orders...
                         </div>
                     ) : (
-                        <div className="flex gap-4 h-full min-w-max">
+                        <div className="grid grid-cols-5 gap-3 h-full">
                             {COLUMNS.map(col => {
                                 const colOrders = filtered
                                     .filter(o => o.status === col.status)
                                     .sort((a, b) => getWaitSeconds(b) - getWaitSeconds(a))
                                 return (
-                                    <div key={col.status} className="w-72 flex flex-col flex-shrink-0">
+                                    <div key={col.status} className="flex flex-col min-w-0 h-full">
                                         <div
-                                            className="flex items-center justify-between px-3 py-2 rounded-xl mb-3"
+                                            className="flex items-center justify-between px-3 py-2 rounded-xl mb-3 flex-shrink-0"
                                             style={{ background: col.bg, border: `1px solid ${col.border}` }}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-2 h-2 rounded-full" style={{ background: col.color }} />
-                                                <span className="text-[12px] font-semibold" style={{ color: col.color }}>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
+                                                <span className="text-[12px] font-semibold truncate" style={{ color: col.color }}>
                                                     {col.label}
                                                 </span>
                                             </div>
                                             <span
-                                                className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+                                                className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
                                                 style={{ background: col.color + '20', color: col.color }}
                                             >
                                                 {colOrders.length}
                                             </span>
                                         </div>
-                                        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pb-2">
+                                        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pb-2 min-h-0">
                                             {colOrders.length === 0 ? (
                                                 <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-gray-100 text-[12px] text-gray-300">
                                                     No orders
