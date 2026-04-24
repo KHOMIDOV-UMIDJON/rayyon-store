@@ -152,11 +152,51 @@ export default function OrderDetailPage() {
                 </span>
             </div>
 
-            {/* ── 3-column grid ── */}
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="grid grid-cols-3 gap-3 max-w-[1400px] mx-auto">
 
-                    {/* LEFT — Picking list + primary action */}
+                    {/* LEFT — Customer + Order details + Assign driver */}
+                    <div className="flex flex-col gap-3">
+                        <CustomerCard
+                            name={order.customerName}
+                            phone={order.customerPhone}
+                        />
+
+                        <div className="bg-white rounded-xl border border-gray-100 p-4">
+                            <h2 className="text-[14px] font-semibold text-gray-900 mb-3">Order details</h2>
+                            <Row label="Address" value={order.deliveryAddress || '—'} />
+                            <Row label="Payment" value={PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} green />
+                            <Row label="Subtotal" value={`${fmtMoney(order.subtotal)} UZS`} />
+                            <Row label="Delivery" value={`${fmtMoney(order.deliveryFee)} UZS`} />
+                            <Row label="Total" value={`${fmtMoney(order.totalAmount)} UZS`} bold />
+                            {order.notes && (
+                                <div className="flex justify-between items-start pt-2.5 mt-1.5 border-t border-gray-50 gap-3">
+                                    <span className="text-[12px] text-gray-400 flex-shrink-0">Note</span>
+                                    <span className="text-[13px] font-medium text-orange-500 text-right">{order.notes}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {isReady && (
+                            <AssignDriverCard
+                                drivers={drivers}
+                                alreadyAssignedDriverId={order.assignedDriverId}
+                                alreadyAssignedDriverName={order.driverName}
+                                onAssignDriver={(id) => assignDriverMut.mutate(id)}
+                                onConfirmPickup={() => pickupMut.mutate()}
+                                assigning={assignDriverMut.isPending}
+                                confirming={pickupMut.isPending}
+                            />
+                        )}
+                    </div>
+
+                    {/* MIDDLE — Timeline + Event log (UNCHANGED) */}
+                    <div className="flex flex-col gap-3">
+                        <OrderTimeline history={history} currentStatus={order.status} />
+                        <OrderEventLog history={history} />
+                    </div>
+
+                    {/* RIGHT — Picking list + primary action */}
                     <div className="flex flex-col gap-3">
                         <PickingList
                             items={items}
@@ -196,47 +236,6 @@ export default function OrderDetailPage() {
                             </button>
                         )}
                     </div>
-
-                    {/* MIDDLE — Timeline + Event log */}
-                    <div className="flex flex-col gap-3">
-                        <OrderTimeline history={history} currentStatus={order.status} />
-                        <OrderEventLog history={history} />
-                    </div>
-
-                    {/* RIGHT — Customer + Details + Driver assignment */}
-                    <div className="flex flex-col gap-3">
-                        <CustomerCard
-                            name={order.customerName}
-                            phone={order.customerPhone}
-                        />
-
-                        <div className="bg-white rounded-xl border border-gray-100 p-3.5">
-                            <h2 className="text-[12px] font-semibold text-gray-900 mb-2">Order details</h2>
-                            <Row label="Address" value={order.deliveryAddress || '—'} />
-                            <Row label="Payment" value={PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} green />
-                            <Row label="Subtotal" value={`${fmtMoney(order.subtotal)} UZS`} />
-                            <Row label="Delivery" value={`${fmtMoney(order.deliveryFee)} UZS`} />
-                            <Row label="Total" value={`${fmtMoney(order.totalAmount)} UZS`} bold />
-                            {order.notes && (
-                                <div className="flex justify-between items-start pt-2 mt-1 border-t border-gray-50 gap-3">
-                                    <span className="text-[10px] text-gray-400 flex-shrink-0">Note</span>
-                                    <span className="text-[11px] font-medium text-orange-500 text-right">{order.notes}</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {isReady && (
-                            <AssignDriverCard
-                                drivers={drivers}
-                                alreadyAssignedDriverId={order.assignedDriverId}
-                                alreadyAssignedDriverName={order.driverName}
-                                onAssignDriver={(id) => assignDriverMut.mutate(id)}
-                                onConfirmPickup={() => pickupMut.mutate()}
-                                assigning={assignDriverMut.isPending}
-                                confirming={pickupMut.isPending}
-                            />
-                        )}
-                    </div>
                 </div>
             </div>
         </div>
@@ -253,15 +252,15 @@ function Row({ label, value, green, bold, orange }: {
     const cls = green
         ? 'text-brand'
         : bold
-            ? 'text-gray-900 font-bold text-[12px]'
+            ? 'text-gray-900 font-bold text-[15px]'
             : orange
                 ? 'text-orange-500'
                 : 'text-gray-700'
 
     return (
-        <div className="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0 gap-3">
-            <span className="text-[10px] text-gray-400 flex-shrink-0">{label}</span>
-            <span className={'text-[11px] font-medium text-right ' + cls}>{value}</span>
+        <div className="flex justify-between items-center py-2 border-b border-gray-50 last:border-0 gap-3">
+            <span className="text-[12px] text-gray-400 flex-shrink-0">{label}</span>
+            <span className={'text-[13px] font-medium text-right ' + cls}>{value}</span>
         </div>
     )
 }

@@ -40,15 +40,15 @@ export default function AssignDriverCard({
         .sort((a, b) => (a.activeOrderCount ?? 0) - (b.activeOrderCount ?? 0))
 
     return (
-        <div className="bg-white rounded-xl border border-gray-100 p-3.5">
-            <div className="flex items-center gap-2 mb-2.5">
-                <Clock size={13} className="text-blue-500" />
-                <span className="text-[12px] font-semibold text-gray-900 flex-1">
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <Clock size={15} className="text-blue-500" />
+                <span className="text-[15px] font-semibold text-gray-900 flex-1">
                     {hasDriver ? 'Driver' : 'Assign driver'}
                 </span>
                 <span
                     className={
-                        'text-[9px] font-bold px-2 py-0.5 rounded-full ' +
+                        'text-[11px] font-bold px-2.5 py-1 rounded-full ' +
                         (hasDriver ? 'bg-green-50 text-brand-dark' : 'bg-red-50 text-red-500')
                     }
                 >
@@ -57,26 +57,26 @@ export default function AssignDriverCard({
             </div>
 
             {hasDriver && (
-                <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-100 rounded-lg mb-2.5">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[9px] font-bold text-blue-800 flex-shrink-0">
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg mb-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[11px] font-bold text-blue-800 flex-shrink-0">
                         {initials(alreadyAssignedDriverName || '')}
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="text-[11px] font-semibold text-gray-900 truncate">
+                        <div className="text-[14px] font-semibold text-gray-900 truncate">
                             {alreadyAssignedDriverName}
                         </div>
-                        <div className="text-[9px] text-blue-700">Heading to store</div>
+                        <div className="text-[12px] text-blue-700 mt-0.5">Heading to store</div>
                     </div>
                 </div>
             )}
 
             {!hasDriver && (
                 <>
-                    <div className="text-[9px] font-bold text-gray-300 uppercase tracking-wider mb-1.5">
+                    <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">
                         Drivers · sorted by workload
                     </div>
                     {sortedDrivers.length === 0 ? (
-                        <div className="text-[10px] text-gray-400 py-3 text-center">No drivers available</div>
+                        <div className="text-[13px] text-gray-400 py-4 text-center">No drivers available</div>
                     ) : (
                         sortedDrivers.map(d => {
                             const isSelected = selectedDriver === d.id
@@ -87,29 +87,29 @@ export default function AssignDriverCard({
                                         setSelectedDriver(prev => (prev === d.id ? null : d.id))
                                     }
                                     className={
-                                        'flex items-center gap-2 p-1.5 rounded-lg border cursor-pointer transition-all mb-1 ' +
+                                        'flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all mb-1.5 ' +
                                         (isSelected
                                             ? 'border-brand bg-green-50 border-[1.5px]'
                                             : 'border-gray-100 bg-white hover:bg-gray-50')
                                     }
                                 >
-                                    <div className="w-6 h-6 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[9px] font-bold text-blue-800 flex-shrink-0">
+                                    <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center text-[11px] font-bold text-blue-800 flex-shrink-0">
                                         {initials(d.fullName)}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-[11px] font-semibold text-gray-900 truncate">
+                                        <div className="text-[14px] font-semibold text-gray-900 truncate">
                                             {d.fullName}
                                         </div>
-                                        <div className="text-[8px] text-gray-400 uppercase tracking-wide">
+                                        <div className="text-[11px] text-gray-400 uppercase tracking-wide mt-0.5">
                                             {d.role}
                                         </div>
                                     </div>
-                                    <span className="text-[8px] font-bold text-brand-dark bg-green-50 px-1.5 py-0.5 rounded-full">
+                                    <span className="text-[10px] font-bold text-brand-dark bg-green-50 px-2 py-0.5 rounded-full">
                                         {d.activeOrderCount ?? 0} active
                                     </span>
                                     {isSelected && (
-                                        <div className="w-4 h-4 rounded-full bg-brand flex items-center justify-center flex-shrink-0">
-                                            <Check size={10} className="text-white" strokeWidth={3} />
+                                        <div className="w-5 h-5 rounded-full bg-brand flex items-center justify-center flex-shrink-0">
+                                            <Check size={12} className="text-white" strokeWidth={3} />
                                         </div>
                                     )}
                                 </div>
@@ -119,12 +119,12 @@ export default function AssignDriverCard({
                 </>
             )}
 
-            <div className="flex gap-1.5 mt-2.5">
+            <div className="flex gap-2 mt-3">
                 {!hasDriver && (
                     <button
                         onClick={() => selectedDriver && onAssignDriver(selectedDriver)}
                         disabled={busy || !selectedDriver}
-                        className="flex-1 py-2 rounded-lg bg-brand text-white text-[11px] font-semibold hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 py-2.5 rounded-lg bg-brand text-white text-[13px] font-semibold hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                         {assigning
                             ? 'Assigning...'
@@ -138,7 +138,7 @@ export default function AssignDriverCard({
                     onClick={onConfirmPickup}
                     disabled={busy || !canConfirm}
                     className={
-                        'flex-1 py-2 rounded-lg text-[11px] font-semibold transition-colors ' +
+                        'flex-1 py-2.5 rounded-lg text-[13px] font-semibold transition-colors ' +
                         (canConfirm
                             ? 'bg-white text-gray-900 border border-gray-300 hover:bg-gray-50'
                             : 'bg-gray-100 text-gray-400 border border-gray-100 cursor-not-allowed')
@@ -149,7 +149,7 @@ export default function AssignDriverCard({
             </div>
 
             {!canConfirm && !hasDriver && (
-                <div className="text-[9px] text-gray-400 text-center mt-1.5">
+                <div className="text-[11px] text-gray-400 text-center mt-2">
                     Pickup can be confirmed after driver is assigned
                 </div>
             )}

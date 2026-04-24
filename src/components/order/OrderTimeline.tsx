@@ -24,8 +24,8 @@ export default function OrderTimeline({ history, currentStatus }: Props) {
     if (!history || history.length === 0) {
         return (
             <div className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="text-[13px] font-semibold text-gray-900 mb-2">Timeline</div>
-                <div className="text-[11px] text-gray-400 py-4 text-center">No events yet</div>
+                <div className="text-[15px] font-semibold text-gray-900 mb-2">Timeline</div>
+                <div className="text-[13px] text-gray-400 py-4 text-center">No events yet</div>
             </div>
         )
     }
@@ -39,10 +39,10 @@ export default function OrderTimeline({ history, currentStatus }: Props) {
 
     return (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[13px] font-semibold text-gray-900">Timeline</h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-[15px] font-semibold text-gray-900">Timeline</h2>
                 {total && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-50 text-brand-dark">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-green-50 text-brand-dark">
                         {total}
                     </span>
                 )}
@@ -57,26 +57,26 @@ export default function OrderTimeline({ history, currentStatus }: Props) {
                         : formatElapsed(sorted[i - 1].createdAt, event.createdAt)
 
                     const dotStyle = isCurrent
-                        ? { boxShadow: '0 0 0 3px #E1F5EE' }
+                        ? { boxShadow: '0 0 0 4px #E1F5EE' }
                         : undefined
 
                     return (
-                        <div key={i} className="relative flex items-start gap-3 py-1.5">
-                            <div className="w-[18px] flex justify-center flex-shrink-0 pt-0.5">
-                                <div className="w-2 h-2 rounded-full bg-brand" style={dotStyle} />
+                        <div key={i} className="relative flex items-start gap-3 py-2">
+                            <div className="w-[20px] flex justify-center flex-shrink-0 pt-1">
+                                <div className="w-2.5 h-2.5 rounded-full bg-brand" style={dotStyle} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline justify-between gap-2">
-                                    <div className="text-[11px] font-semibold text-gray-900">
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <div className="text-[13px] font-semibold text-gray-900">
                                         {STATUS_LABELS[event.status] || event.status}
                                     </div>
-                                    <div className="text-[10px] text-gray-400 whitespace-nowrap">
+                                    <div className="text-[12px] text-gray-400 whitespace-nowrap">
                                         {formatDateTime(event.createdAt)}
                                     </div>
                                 </div>
                                 <div
                                     className={
-                                        'text-[10px] mt-0.5 ' +
+                                        'text-[12px] mt-1 ' +
                                         (isCurrent ? 'text-brand-dark font-medium' : 'text-gray-400')
                                     }
                                 >
@@ -85,7 +85,7 @@ export default function OrderTimeline({ history, currentStatus }: Props) {
                                 </div>
                             </div>
                             {!isLast && (
-                                <div className="absolute left-[12px] top-[22px] bottom-[-2px] w-px bg-gray-200" />
+                                <div className="absolute left-[14px] top-[28px] bottom-[-4px] w-px bg-gray-200" />
                             )}
                         </div>
                     )

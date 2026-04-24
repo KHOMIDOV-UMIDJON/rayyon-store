@@ -56,8 +56,8 @@ export default function OrderEventLog({ history }: Props) {
     if (!history || history.length === 0) {
         return (
             <div className="bg-white rounded-xl border border-gray-100 p-4">
-                <div className="text-[13px] font-semibold text-gray-900 mb-2">Event log</div>
-                <div className="text-[11px] text-gray-400 py-4 text-center">No events yet</div>
+                <div className="text-[15px] font-semibold text-gray-900 mb-2">Event log</div>
+                <div className="text-[13px] text-gray-400 py-4 text-center">No events yet</div>
             </div>
         )
     }
@@ -68,9 +68,9 @@ export default function OrderEventLog({ history }: Props) {
 
     return (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="flex items-center justify-between mb-2">
-                <h2 className="text-[13px] font-semibold text-gray-900">Event log</h2>
-                <span className="text-[10px] text-gray-400">
+            <div className="flex items-center justify-between mb-3">
+                <h2 className="text-[15px] font-semibold text-gray-900">Event log</h2>
+                <span className="text-[12px] text-gray-400">
                     {history.length} event{history.length === 1 ? '' : 's'}
                 </span>
             </div>
@@ -84,29 +84,29 @@ export default function OrderEventLog({ history }: Props) {
                         : ''
                     const avatarCls = avatarColors(event.changedByRole)
                     return (
-                        <div key={i} className="flex items-start gap-2.5 py-2 border-b border-gray-50 last:border-0">
+                        <div key={i} className="flex items-start gap-3 py-2.5 border-b border-gray-50 last:border-0">
                             <div
                                 className={
-                                    'w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 ' +
+                                    'w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ' +
                                     avatarCls
                                 }
                             >
                                 {initials(event.changedByName)}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="text-[11px] text-gray-800">
+                                <div className="text-[13px] text-gray-800">
                                     <span className="font-semibold text-gray-900">
                                         {event.changedByName || 'System'}
                                     </span>
                                     {' '}
                                     <span className={'font-medium ' + actionColor}>{actionText}</span>
                                 </div>
-                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                <div className="text-[12px] text-gray-400 mt-1">
                                     {roleLabel && <span>{roleLabel} · </span>}
                                     {formatDateTime(event.createdAt)}
                                 </div>
                                 {event.note && (
-                                    <div className="text-[10px] text-gray-500 mt-1 italic">{event.note}</div>
+                                    <div className="text-[12px] text-gray-500 mt-1 italic">{event.note}</div>
                                 )}
                             </div>
                         </div>
