@@ -82,10 +82,10 @@ export default function OrderDetailPage() {
     })
 
     const pickupMut = useMutation({
-        mutationFn: () => storeApi.complete(orderId!),
+        mutationFn: () => storeApi.confirmPickup(orderId!),
         onSuccess: () => {
             invalidate()
-            setToast({ message: 'Picked up!', type: 'success' })
+            setToast({ message: 'Pickup confirmed!', type: 'success' })
             setTimeout(() => navigate('/kanban'), 1000)
         },
         onError: (err: AxiosError<{ message: string }>) =>
@@ -116,6 +116,7 @@ export default function OrderDetailPage() {
     const isConfirmed = order.status === 'CONFIRMED'
     const isPreparing = order.status === 'PREPARING'
     const isReady = order.status === 'READY_FOR_PICKUP'
+    const isCourierAssigned = order.status === 'COURIER_ASSIGNED'
 
     const toggleItem = (id: string) =>
         setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }))
@@ -177,7 +178,7 @@ export default function OrderDetailPage() {
                             )}
                         </div>
 
-                        {isReady && (
+                        {(isReady || isCourierAssigned) && (
                             <AssignDriverCard
                                 drivers={drivers}
                                 alreadyAssignedDriverId={order.assignedDriverId}
@@ -190,7 +191,7 @@ export default function OrderDetailPage() {
                         )}
                     </div>
 
-                    {/* MIDDLE — Timeline + Event log (UNCHANGED) */}
+                    {/* MIDDLE — Timeline + Event log */}
                     <div className="flex flex-col gap-3">
                         <OrderTimeline history={history} currentStatus={order.status} />
                         <OrderEventLog history={history} />
