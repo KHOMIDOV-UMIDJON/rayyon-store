@@ -9,10 +9,12 @@ import OrderFilterBar from '../../components/filters/OrderFilterBar'
 import {
     getWaitSeconds,
     getUrgencyTier,
-    formatWait,
+    getWaitSegments,
+    isOrderActive,
     URGENCY_STYLES,
     applyOrderFilters,
 } from '../../lib/orderUtils'
+import { useCurrentTime } from '../../lib/useCurrentTime'
 import { EMPTY_FILTERS } from '../../types'
 import type { Order, OrderStatus, OrderFilters, UrgencyTier } from '../../types'
 
@@ -38,13 +40,58 @@ function fmtMoney(n: number) {
     return new Intl.NumberFormat('uz-UZ').format(Math.round(n))
 }
 
+// ─────────────────────────────────────────────────────────────
+// TIMER PILL — segmented live timer (days · hours · min · sec)
+// Only visible segments render. Colored by urgency tier.
+// Terminal orders get a neutral grey pill showing total duration.
+// ─────────────────────────────────────────────────────────────
+function TimerPill({ order }: { order: Order }) {
+    const seconds = getWaitSeconds(order)
+    const tier: UrgencyTier = getUrgencyTier(order)
+    const segs = getWaitSegments(seconds)
+    const active = isOrderActive(order)
+
+    const pillCls = !active
+        ? 'bg-gray-100 text-gray-500'
+        : URGENCY_STYLES[tier].pill
+
+    const dotCls = !active
+        ? 'text-gray-300'
+        : tier === 'overdue'
+            ? 'text-red-300'
+            : tier === 'warning'
+                ? 'text-amber-400'
+                : 'text-brand/40'
+
+    // Build visible segments — skip zero units at the head
+    const parts: { value: number; label: string }[] = []
+    if (segs.days > 0)                           parts.push({ value: segs.days,    label: 'd' })
+    if (parts.length > 0 || segs.hours > 0)      parts.push({ value: segs.hours,   label: 'h' })
+    if (parts.length > 0 || segs.minutes > 0)    parts.push({ value: segs.minutes, label: 'm' })
+    parts.push({ value: segs.seconds, label: 's' })
+
+    return (
+        <span
+            className={
+                'inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full font-bold whitespace-nowrap ' +
+                pillCls
+            }
+            style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+            {parts.map((p, i) => (
+                <span key={p.label} className="inline-flex items-center gap-0.5">
+                    {i > 0 && <span className={'text-[8px] ' + dotCls}>·</span>}
+                    <span className="text-[10px]">{p.value}{p.label}</span>
+                </span>
+            ))}
+        </span>
+    )
+}
+
 function OrderCard({ order, onAction }: {
     order: Order
     onAction: (id: string, action: string) => void
 }) {
-    const wait = getWaitSeconds(order)
-    const tier: UrgencyTier = getUrgencyTier(order)
-    const urgency = URGENCY_STYLES[tier]
     const col = COLUMNS.find(c => c.status === order.status)
 
     const nextAction =
@@ -63,9 +110,7 @@ function OrderCard({ order, onAction }: {
                     #{order.orderId.slice(0, 8)}
                 </span>
                 <span className="text-[10px] text-gray-400 flex-1 truncate min-w-0">{order.storeName}</span>
-                <span className={`text-[10px] font-bold whitespace-nowrap ${urgency.text}`}>
-                    ⏱ {formatWait(wait)}
-                </span>
+                <TimerPill order={order} />
             </div>
             <div className="px-2.5 py-2.5">
                 <div className="text-[12px] font-semibold text-gray-900 mb-0.5 truncate">{order.customerName}</div>
@@ -123,6 +168,10 @@ export default function KanbanPage() {
     const queryClient = useQueryClient()
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [filters, setFilters] = useState<OrderFilters>(EMPTY_FILTERS)
+
+    // Subscribe to 1s ticks so all cards re-render their timers.
+    // The returned `now` is unused directly — React's re-render is the effect.
+    useCurrentTime(1000)
 
     const { data: orders = [], isLoading, refetch } = useQuery({
         queryKey: ['store-orders'],

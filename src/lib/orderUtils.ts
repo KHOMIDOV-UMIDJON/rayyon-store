@@ -1,101 +1,117 @@
 import type { Order, OrderFilters, UrgencyTier } from '../types'
 
 // ─────────────────────────────────────────────────────────────
-// WAIT SECONDS — seconds since the order was created
+// TERMINAL STATES — timer freezes when order reaches any of these
 // ─────────────────────────────────────────────────────────────
+const TERMINAL_STATUSES = new Set<string>([
+    'DELIVERED',
+    'COMPLETED',
+    'CANCELLED',
+    'REFUNDED',
+])
+
+// Returns elapsed seconds since order creation.
+// If the order has reached a terminal state, the elapsed time
+// is frozen at (updatedAt - createdAt) so the timer stops ticking.
 export function getWaitSeconds(order: Order): number {
-    return (
-        order.waitSeconds ??
-        Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 1000)
-    )
+    const created = new Date(order.createdAt).getTime()
+    if (isNaN(created)) return 0
+
+    const endMs = TERMINAL_STATUSES.has(order.status) && order.updatedAt
+        ? new Date(order.updatedAt).getTime()
+        : Date.now()
+
+    const secs = Math.floor((endMs - created) / 1000)
+    return secs < 0 ? 0 : secs
+}
+
+// Whether this order's timer is still running
+export function isOrderActive(order: Order): boolean {
+    return !TERMINAL_STATUSES.has(order.status)
 }
 
 // ─────────────────────────────────────────────────────────────
-// URGENCY TIER — Jush-style 3 levels
-//   < 15 min  -> normal
-//   15-30 min -> warning
-//   > 30 min  -> overdue
+// URGENCY TIERS — only apply to active orders
+// < 15 min  -> normal
+// 15-30 min -> warning
+// > 30 min  -> overdue
+// Terminal orders always return 'normal' (no urgency badge)
 // ─────────────────────────────────────────────────────────────
-export const URGENCY_WARNING_SECS = 15 * 60
-export const URGENCY_OVERDUE_SECS = 30 * 60
-
 export function getUrgencyTier(order: Order): UrgencyTier {
-    const wait = getWaitSeconds(order)
-    if (wait >= URGENCY_OVERDUE_SECS) return 'overdue'
-    if (wait >= URGENCY_WARNING_SECS) return 'warning'
+    if (!isOrderActive(order)) return 'normal'
+    const secs = getWaitSeconds(order)
+    if (secs > 30 * 60) return 'overdue'
+    if (secs > 15 * 60) return 'warning'
     return 'normal'
 }
 
 // ─────────────────────────────────────────────────────────────
-// FORMAT WAIT — "mm:ss"
+// FORMATTERS
 // ─────────────────────────────────────────────────────────────
-export function formatWait(secs: number): string {
-    const m = Math.floor(secs / 60)
-    const s = secs % 60
-    return `${m}:${String(s).padStart(2, '0')}`
+
+// Short form for legacy uses: "2m" or "1h 5m" or "1d 4h"
+export function formatWait(seconds: number): string {
+    if (seconds < 60) return `${seconds}s`
+    const m = Math.floor(seconds / 60)
+    if (m < 60) return `${m}m`
+    const h = Math.floor(m / 60)
+    const mm = m % 60
+    if (h < 24) return mm > 0 ? `${h}h ${mm}m` : `${h}h`
+    const d = Math.floor(h / 24)
+    const hh = h % 24
+    return hh > 0 ? `${d}d ${hh}h` : `${d}d`
+}
+
+// Full segmented breakdown — returns every unit separately so the
+// card can render them as labeled pills separated by dots.
+// Always returns at least seconds, then grows as needed.
+export interface WaitSegments {
+    days: number
+    hours: number
+    minutes: number
+    seconds: number
+}
+
+export function getWaitSegments(totalSeconds: number): WaitSegments {
+    if (totalSeconds < 0) totalSeconds = 0
+    const days    = Math.floor(totalSeconds / 86400)
+    const hours   = Math.floor((totalSeconds % 86400) / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+    return { days, hours, minutes, seconds }
 }
 
 // ─────────────────────────────────────────────────────────────
-// URGENCY STYLES — Tailwind class names
+// URGENCY STYLES — tailwind classes for tier-based coloring
 // ─────────────────────────────────────────────────────────────
-export interface UrgencyStyle {
-    dot: string
-    text: string
-    bg: string
-    border: string
-    label: string
-}
-
-export const URGENCY_STYLES: Record<UrgencyTier, UrgencyStyle> = {
-    normal: {
-        dot: 'bg-gray-300',
-        text: 'text-gray-500',
-        bg: 'bg-gray-50',
-        border: 'border-gray-200',
-        label: 'Normal',
-    },
-    warning: {
-        dot: 'bg-amber-500',
-        text: 'text-amber-700',
-        bg: 'bg-amber-50',
-        border: 'border-amber-200',
-        label: '15-30 min',
-    },
-    overdue: {
-        dot: 'bg-red-500',
-        text: 'text-red-600',
-        bg: 'bg-red-50',
-        border: 'border-red-200',
-        label: 'Overdue',
-    },
+export const URGENCY_STYLES: Record<UrgencyTier, { text: string; bg: string; pill: string }> = {
+    normal:  { text: 'text-brand-dark',  bg: 'bg-green-50', pill: 'bg-green-50 text-brand-dark' },
+    warning: { text: 'text-amber-700',   bg: 'bg-amber-50', pill: 'bg-amber-50 text-amber-800'  },
+    overdue: { text: 'text-red-600',     bg: 'bg-red-50',   pill: 'bg-red-50 text-red-700'      },
 }
 
 // ─────────────────────────────────────────────────────────────
-// APPLY ORDER FILTERS — pure function, runs in-memory
-// Used by KanbanPage to filter orders before splitting into columns
+// FILTER APPLICATION
 // ─────────────────────────────────────────────────────────────
 export function applyOrderFilters(
     orders: Order[],
     filters: OrderFilters,
-    getUrgency: (o: Order) => UrgencyTier,
+    urgencyOf: (o: Order) => UrgencyTier,
 ): Order[] {
-    const q = filters.search.trim().toLowerCase()
-
-    return orders.filter(o => {
-        if (q) {
-            const haystack = [
-                o.orderId,
-                o.customerName,
-                o.customerPhone,
-                o.deliveryAddress,
-            ].join(' ').toLowerCase()
-            if (!haystack.includes(q)) return false
+    return orders.filter(order => {
+        if (filters.search) {
+            const q = filters.search.toLowerCase()
+            const hit =
+                order.orderId.toLowerCase().includes(q) ||
+                (order.customerName?.toLowerCase().includes(q) ?? false) ||
+                (order.deliveryAddress?.toLowerCase().includes(q) ?? false)
+            if (!hit) return false
         }
-        if (filters.status        && o.status !== filters.status)               return false
-        if (filters.paymentMethod && o.paymentMethod !== filters.paymentMethod) return false
-        if (filters.collectorId   && o.collectorId !== filters.collectorId)     return false
-        if (filters.driverId      && o.assignedDriverId !== filters.driverId)   return false
-        if (filters.urgency       && getUrgency(o) !== filters.urgency)         return false
+        if (filters.status        && order.status !== filters.status) return false
+        if (filters.paymentMethod && order.paymentMethod !== filters.paymentMethod) return false
+        if (filters.collectorId   && order.collectorId !== filters.collectorId) return false
+        if (filters.driverId      && order.assignedDriverId !== filters.driverId) return false
+        if (filters.urgency       && urgencyOf(order) !== filters.urgency) return false
         return true
     })
 }
