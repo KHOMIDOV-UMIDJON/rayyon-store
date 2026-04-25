@@ -10,7 +10,6 @@ import PickingList from '../../components/order/PickingList'
 import OrderTimeline from '../../components/order/OrderTimeline'
 import AssignCollectorCard from '../../components/order/AssignCollectorCard'
 import AssignDriverCard from '../../components/order/AssignDriverCard'
-import OrderEventLog from '../../components/order/OrderEventLog'
 
 const fmtMoney = (n: number) => new Intl.NumberFormat('uz-UZ').format(Math.round(n))
 
@@ -251,7 +250,6 @@ export default function OrderDetailPage() {
                     {/* MIDDLE — Timeline + Event log */}
                     <div className="flex flex-col gap-3">
                         <OrderTimeline history={history} currentStatus={order.status} />
-                        <OrderEventLog history={history} />
                     </div>
 
                     {/* RIGHT — Picking list + primary action */}
