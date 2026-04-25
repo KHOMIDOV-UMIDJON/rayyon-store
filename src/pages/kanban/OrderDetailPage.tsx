@@ -23,6 +23,8 @@ const STATUS_STYLES: Record<string, string> = {
     PREPARING: 'bg-orange-50 text-orange-700',
     READY_FOR_PICKUP: 'bg-green-50 text-brand-dark',
     COURIER_ASSIGNED: 'bg-purple-50 text-purple-700',
+    COURIER_ACCEPTED: 'bg-purple-50 text-purple-700',
+    PICKED_UP: 'bg-purple-50 text-purple-700',
     DELIVERED: 'bg-blue-50 text-blue-700',
     COMPLETED: 'bg-gray-100 text-gray-600',
 }
@@ -47,11 +49,17 @@ export default function OrderDetailPage() {
         queryFn: storeApi.getStaff,
     })
 
-    const drivers = staff.filter(s => s.role === 'DRIVER')
+    // Use the dedicated drivers endpoint — returns Driver[] with activeOrderCount
+    // sorted by workload, ready for AssignDriverCard
+    const { data: drivers = [] } = useQuery({
+        queryKey: ['store-drivers'],
+        queryFn: storeApi.getDrivers,
+    })
 
     const invalidate = () => {
         void queryClient.invalidateQueries({ queryKey: ['store-orders'] })
         void queryClient.invalidateQueries({ queryKey: ['order', orderId] })
+        void queryClient.invalidateQueries({ queryKey: ['store-drivers'] })
     }
 
     const confirmMut = useMutation({
@@ -122,11 +130,19 @@ export default function OrderDetailPage() {
 
     const isCreated = order.status === 'CREATED'
     const isPreparing = order.status === 'PREPARING'
-    const isReady = order.status === 'READY_FOR_PICKUP'
-    const isCourierAssigned = order.status === 'COURIER_ASSIGNED'
 
-    // Show collector card from CONFIRMED onward (i.e. not at CREATED)
+    // Show collector card from CONFIRMED onward (not at CREATED)
     const showCollectorCard = !isCreated
+
+    // Driver card visible once order is READY_FOR_PICKUP and stays visible
+    // through the rest of the lifecycle (assigned → in transit → done)
+    const showDriverCard =
+        order.status === 'READY_FOR_PICKUP' ||
+        order.status === 'COURIER_ASSIGNED' ||
+        order.status === 'COURIER_ACCEPTED' ||
+        order.status === 'PICKED_UP' ||
+        order.status === 'DELIVERED' ||
+        order.status === 'COMPLETED'
 
     const toggleItem = (id: string) =>
         setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }))
@@ -205,11 +221,12 @@ export default function OrderDetailPage() {
                             />
                         )}
 
-                        {(isReady || isCourierAssigned) && (
+                        {showDriverCard && (
                             <AssignDriverCard
                                 drivers={drivers}
                                 alreadyAssignedDriverId={order.assignedDriverId}
                                 alreadyAssignedDriverName={order.driverName}
+                                orderStatus={order.status}
                                 onAssignDriver={(id) => assignDriverMut.mutate(id)}
                                 onConfirmPickup={() => pickupMut.mutate()}
                                 assigning={assignDriverMut.isPending}
