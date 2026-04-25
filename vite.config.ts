@@ -7,4 +7,9 @@ export default defineConfig({
     resolve: {
         dedupe: ['react', 'react-dom'],
     },
+    oxc: {
+        jsx: {
+            runtime: 'automatic',
+        },
+    },
 })
