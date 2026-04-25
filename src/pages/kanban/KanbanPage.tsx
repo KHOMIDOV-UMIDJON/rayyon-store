@@ -18,18 +18,31 @@ import { useCurrentTime } from '../../lib/useCurrentTime'
 import { EMPTY_FILTERS } from '../../types'
 import type { Order, OrderStatus, OrderFilters, UrgencyTier } from '../../types'
 
+// ─────────────────────────────────────────────────────────────
+// COLUMNS — each column maps multiple statuses so orders don't
+// disappear between transitions.
+//
+//   New orders → CONFIRMED
+//   Preparing  → PREPARING
+//   Ready      → READY_FOR_PICKUP, COURIER_ASSIGNED, COURIER_ACCEPTED
+//                (bag still at store; driver may or may not be assigned)
+//   Picked up  → PICKED_UP
+//                (driver has the bag, en route to customer)
+//   Delivered  → DELIVERED, COMPLETED
+// ─────────────────────────────────────────────────────────────
 const COLUMNS: {
-    status: OrderStatus
+    id: string
+    statuses: OrderStatus[]
     label: string
     color: string
     bg: string
     border: string
 }[] = [
-    { status: 'CONFIRMED',        label: 'New orders', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
-    { status: 'PREPARING',        label: 'Preparing',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
-    { status: 'READY_FOR_PICKUP', label: 'Ready',      color: '#0F6E56', bg: '#E1F5EE', border: '#9FE1CB' },
-    { status: 'COURIER_ASSIGNED', label: 'Picked up',  color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
-    { status: 'DELIVERED',        label: 'Delivered',  color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
+    { id: 'new',       statuses: ['CONFIRMED'],                                                 label: 'New orders', color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+    { id: 'preparing', statuses: ['PREPARING'],                                                 label: 'Preparing',  color: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+    { id: 'ready',     statuses: ['READY_FOR_PICKUP', 'COURIER_ASSIGNED', 'COURIER_ACCEPTED'],  label: 'Ready',      color: '#0F6E56', bg: '#E1F5EE', border: '#9FE1CB' },
+    { id: 'pickedup',  statuses: ['PICKED_UP'],                                                 label: 'Picked up',  color: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+    { id: 'delivered', statuses: ['DELIVERED', 'COMPLETED'],                                    label: 'Delivered',  color: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
 ]
 
 const PAYMENT_LABELS: Record<string, string> = {
@@ -40,11 +53,6 @@ function fmtMoney(n: number) {
     return new Intl.NumberFormat('uz-UZ').format(Math.round(n))
 }
 
-// ─────────────────────────────────────────────────────────────
-// TIMER PILL — segmented live timer (days · hours · min · sec)
-// Only visible segments render. Colored by urgency tier.
-// Terminal orders get a neutral grey pill showing total duration.
-// ─────────────────────────────────────────────────────────────
 function TimerPill({ order }: { order: Order }) {
     const seconds = getWaitSeconds(order)
     const tier: UrgencyTier = getUrgencyTier(order)
@@ -63,7 +71,6 @@ function TimerPill({ order }: { order: Order }) {
                 ? 'text-amber-400'
                 : 'text-brand/40'
 
-    // Build visible segments — skip zero units at the head
     const parts: { value: number; label: string }[] = []
     if (segs.days > 0)                           parts.push({ value: segs.days,    label: 'd' })
     if (parts.length > 0 || segs.hours > 0)      parts.push({ value: segs.hours,   label: 'h' })
@@ -92,12 +99,12 @@ function OrderCard({ order, onAction }: {
     order: Order
     onAction: (id: string, action: string) => void
 }) {
-    const col = COLUMNS.find(c => c.status === order.status)
+    const col = COLUMNS.find(c => c.statuses.includes(order.status))
 
     const nextAction =
-        order.status === 'CONFIRMED'          ? { label: 'Start preparing', action: 'prepare'  }
-            : order.status === 'PREPARING'          ? { label: 'Mark as ready',   action: 'ready'    }
-                : order.status === 'READY_FOR_PICKUP'   ? { label: 'Confirm pickup',  action: 'complete' }
+        order.status === 'CONFIRMED'          ? { label: 'Start preparing', action: 'prepare'       }
+            : order.status === 'PREPARING'          ? { label: 'Mark as ready',   action: 'ready'         }
+                : order.status === 'READY_FOR_PICKUP'   ? { label: 'Confirm pickup',  action: 'confirmPickup' }
                     : null
 
     return (
@@ -169,8 +176,6 @@ export default function KanbanPage() {
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
     const [filters, setFilters] = useState<OrderFilters>(EMPTY_FILTERS)
 
-    // Subscribe to 1s ticks so all cards re-render their timers.
-    // The returned `now` is unused directly — React's re-render is the effect.
     useCurrentTime(1000)
 
     const { data: orders = [], isLoading, refetch } = useQuery({
@@ -186,9 +191,9 @@ export default function KanbanPage() {
 
     const mutation = useMutation({
         mutationFn: ({ id, action }: { id: string; action: string }) => {
-            if (action === 'prepare')  return storeApi.prepare(id)
-            if (action === 'ready')    return storeApi.ready(id)
-            if (action === 'complete') return storeApi.complete(id)
+            if (action === 'prepare')       return storeApi.prepare(id)
+            if (action === 'ready')         return storeApi.ready(id)
+            if (action === 'confirmPickup') return storeApi.confirmPickup(id)
             return Promise.reject(new Error('Unknown action'))
         },
         onSuccess: () => {
@@ -204,7 +209,10 @@ export default function KanbanPage() {
         [orders, filters],
     )
 
-    const activeStatuses: OrderStatus[] = ['CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP', 'COURIER_ASSIGNED']
+    const activeStatuses: OrderStatus[] = [
+        'CONFIRMED', 'PREPARING', 'READY_FOR_PICKUP',
+        'COURIER_ASSIGNED', 'COURIER_ACCEPTED', 'PICKED_UP',
+    ]
     const activeCount = filtered.filter(o => activeStatuses.includes(o.status)).length
     const urgentCount = filtered.filter(o =>
         getUrgencyTier(o) === 'overdue' && activeStatuses.includes(o.status),
@@ -252,10 +260,10 @@ export default function KanbanPage() {
                         <div className="grid grid-cols-5 gap-3 h-full">
                             {COLUMNS.map(col => {
                                 const colOrders = filtered
-                                    .filter(o => o.status === col.status)
+                                    .filter(o => col.statuses.includes(o.status))
                                     .sort((a, b) => getWaitSeconds(b) - getWaitSeconds(a))
                                 return (
-                                    <div key={col.status} className="flex flex-col min-w-0 h-full">
+                                    <div key={col.id} className="flex flex-col min-w-0 h-full">
                                         <div
                                             className="flex items-center justify-between px-3 py-2 rounded-xl mb-3 flex-shrink-0"
                                             style={{ background: col.bg, border: `1px solid ${col.border}` }}
