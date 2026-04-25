@@ -8,6 +8,7 @@ import Toast from '../../components/ui/Toast'
 import CustomerCard from '../../components/order/CustomerCard'
 import PickingList from '../../components/order/PickingList'
 import OrderTimeline from '../../components/order/OrderTimeline'
+import AssignCollectorCard from '../../components/order/AssignCollectorCard'
 import AssignDriverCard from '../../components/order/AssignDriverCard'
 import OrderEventLog from '../../components/order/OrderEventLog'
 
@@ -56,6 +57,13 @@ export default function OrderDetailPage() {
     const confirmMut = useMutation({
         mutationFn: () => storeApi.confirm(orderId!),
         onSuccess: () => { invalidate(); setToast({ message: 'Order confirmed!', type: 'success' }) },
+        onError: (err: AxiosError<{ message: string }>) =>
+            setToast({ message: err?.response?.data?.message ?? 'Failed', type: 'error' }),
+    })
+
+    const assignCollectorMut = useMutation({
+        mutationFn: (collectorId: string) => storeApi.assignCollector(orderId!, collectorId),
+        onSuccess: () => { invalidate(); setToast({ message: 'Collector assigned!', type: 'success' }) },
         onError: (err: AxiosError<{ message: string }>) =>
             setToast({ message: err?.response?.data?.message ?? 'Failed', type: 'error' }),
     })
@@ -111,12 +119,14 @@ export default function OrderDetailPage() {
     const history = order.statusHistory ?? []
     const totalItems = items.length
     const checkedCount = items.filter(i => checkedItems[i.id]).length
-    const allChecked = totalItems > 0 && checkedCount === totalItems
 
-    const isConfirmed = order.status === 'CONFIRMED'
+    const isCreated = order.status === 'CREATED'
     const isPreparing = order.status === 'PREPARING'
     const isReady = order.status === 'READY_FOR_PICKUP'
     const isCourierAssigned = order.status === 'COURIER_ASSIGNED'
+
+    // Show collector card from CONFIRMED onward (i.e. not at CREATED)
+    const showCollectorCard = !isCreated
 
     const toggleItem = (id: string) =>
         setCheckedItems(prev => ({ ...prev, [id]: !prev[id] }))
@@ -156,7 +166,7 @@ export default function OrderDetailPage() {
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="grid grid-cols-3 gap-3 max-w-[1400px] mx-auto">
 
-                    {/* LEFT — Customer + Order details + Assign driver */}
+                    {/* LEFT — Customer + Order details + Collector + Driver */}
                     <div className="flex flex-col gap-3">
                         <CustomerCard
                             name={order.customerName}
@@ -177,6 +187,23 @@ export default function OrderDetailPage() {
                                 </div>
                             )}
                         </div>
+
+                        {showCollectorCard && (
+                            <AssignCollectorCard
+                                staff={staff}
+                                assignedCollectorId={order.collectorId}
+                                assignedCollectorName={order.collectorName}
+                                orderStatus={order.status}
+                                pickedCount={checkedCount}
+                                totalItems={totalItems}
+                                onAssign={(id) => assignCollectorMut.mutate(id)}
+                                onStartPreparing={() => prepareMut.mutate()}
+                                onMarkReady={() => readyMut.mutate()}
+                                assigning={assignCollectorMut.isPending}
+                                starting={prepareMut.isPending}
+                                markingReady={readyMut.isPending}
+                            />
+                        )}
 
                         {(isReady || isCourierAssigned) && (
                             <AssignDriverCard
@@ -207,33 +234,13 @@ export default function OrderDetailPage() {
                             interactive={isPreparing}
                         />
 
-                        {order.status === 'CREATED' && (
+                        {isCreated && (
                             <button
                                 onClick={() => confirmMut.mutate()}
                                 disabled={confirmMut.isPending}
                                 className="py-2.5 rounded-xl bg-brand text-white text-[12px] font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
                             >
                                 {confirmMut.isPending ? 'Confirming...' : 'Confirm order'}
-                            </button>
-                        )}
-                        {isConfirmed && (
-                            <button
-                                onClick={() => prepareMut.mutate()}
-                                disabled={prepareMut.isPending}
-                                className="py-2.5 rounded-xl bg-brand text-white text-[12px] font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
-                            >
-                                {prepareMut.isPending ? 'Starting...' : 'Start preparing'}
-                            </button>
-                        )}
-                        {isPreparing && (
-                            <button
-                                onClick={() => readyMut.mutate()}
-                                disabled={readyMut.isPending || !allChecked}
-                                className="py-2.5 rounded-xl bg-brand text-white text-[12px] font-semibold hover:bg-brand-dark disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                                {!allChecked
-                                    ? `Pick all items first (${checkedCount}/${totalItems})`
-                                    : readyMut.isPending ? 'Processing...' : 'Mark as ready'}
                             </button>
                         )}
                     </div>

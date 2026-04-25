@@ -52,27 +52,26 @@ export const storeApi = {
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
-    // ── Store confirms handover to driver (COURIER_ASSIGNED → PICKED_UP)
     confirmPickup: async (id: string): Promise<Order> => {
         const res = await api.put<ApiResponse<Order>>(`/store/orders/${id}/confirm-pickup`)
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
-    // ── Final completion after delivery (DELIVERED → COMPLETED). Kept for
-    // future use; "Confirm pickup" button no longer calls this.
     complete: async (id: string): Promise<Order> => {
         const res = await api.put<ApiResponse<Order>>(`/store/orders/${id}/complete`)
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
+    // ── Backend expects JSON body { collectorId }, not a query param ──
     assignCollector: async (orderId: string, collectorId: string): Promise<Order> => {
         const res = await api.put<ApiResponse<Order>>(
-            `/store/orders/${orderId}/assign-collector?collectorId=${collectorId}`
+            `/store/orders/${orderId}/assign-collector`,
+            { collectorId },
         )
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
-    // ── Backend expects JSON body { driverId }, not a query param
+    // ── Backend expects JSON body { driverId }, not a query param ──
     assignDriver: async (orderId: string, driverId: string): Promise<Order> => {
         const res = await api.put<ApiResponse<Order>>(
             `/store/orders/${orderId}/assign-driver`,
