@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Truck, Check, Pencil, MapPin, CheckCircle } from 'lucide-react'
+import { Truck, Check, Pencil, MapPin, CheckCircle, AlertTriangle } from 'lucide-react'
 import type { Driver } from '../../api'
 
 function initials(name: string) {
@@ -10,47 +10,50 @@ function initials(name: string) {
 
 interface Props {
     drivers: Driver[]
-    /** Currently assigned driver id, if any */
     alreadyAssignedDriverId?: string
-    /** Currently assigned driver name, if any */
     alreadyAssignedDriverName?: string
     /** Order status — controls which state to render */
     orderStatus: string
     /** Action handlers */
     onAssignDriver: (driverId: string) => void
     onConfirmPickup: () => void
+    onMarkDelivered: () => void
     /** Pending flags */
     assigning: boolean
     confirming: boolean
+    markingDelivered: boolean
 }
 
 type Mode = 'pick' | 'assigned' | 'transit' | 'done'
 
 export default function AssignDriverCard({
-                                             drivers,
-                                             alreadyAssignedDriverId,
-                                             alreadyAssignedDriverName,
-                                             orderStatus,
-                                             onAssignDriver,
-                                             onConfirmPickup,
-                                             assigning,
-                                             confirming,
-                                         }: Props) {
+    drivers,
+    alreadyAssignedDriverId,
+    alreadyAssignedDriverName,
+    orderStatus,
+    onAssignDriver,
+    onConfirmPickup,
+    onMarkDelivered,
+    assigning,
+    confirming,
+    markingDelivered,
+}: Props) {
     const [selected, setSelected] = useState<string | null>(null)
     const [editing, setEditing] = useState(false)
+    const [confirmingOverride, setConfirmingOverride] = useState(false)
 
     const sortedDrivers = drivers
         .slice()
         .sort((a, b) => (a.activeOrderCount ?? 0) - (b.activeOrderCount ?? 0))
 
     const hasDriver = Boolean(alreadyAssignedDriverId)
-    const busy = assigning || confirming
+    const busy = assigning || confirming || markingDelivered
 
     const mode: Mode =
-        orderStatus === 'READY_FOR_PICKUP' && (!hasDriver || editing)                    ? 'pick'
+        orderStatus === 'READY_FOR_PICKUP' && (!hasDriver || editing)                                              ? 'pick'
             : (orderStatus === 'READY_FOR_PICKUP' || orderStatus === 'COURIER_ASSIGNED' || orderStatus === 'COURIER_ACCEPTED') && hasDriver  ? 'assigned'
-                : orderStatus === 'PICKED_UP'                                                ? 'transit'
-                    : 'done'
+            : orderStatus === 'PICKED_UP'                                                                          ? 'transit'
+            : 'done'
 
     const selectedPerson = sortedDrivers.find(d => d.id === selected)
 
@@ -105,8 +108,8 @@ export default function AssignDriverCard({
                                         ((d.activeOrderCount ?? 0) === 0
                                             ? 'bg-green-50 text-brand-dark'
                                             : (d.activeOrderCount ?? 0) <= 2
-                                                ? 'bg-amber-50 text-amber-700'
-                                                : 'bg-red-50 text-red-700')
+                                            ? 'bg-amber-50 text-amber-700'
+                                            : 'bg-red-50 text-red-700')
                                     }
                                 >
                                     {d.activeOrderCount ?? 0} active
@@ -144,8 +147,8 @@ export default function AssignDriverCard({
                         {assigning
                             ? 'Assigning...'
                             : selectedPerson
-                                ? `Assign ${selectedPerson.fullName.split(' ')[0]}`
-                                : 'Select a driver'}
+                            ? `Assign ${selectedPerson.fullName.split(' ')[0]}`
+                            : 'Select a driver'}
                     </button>
                 </div>
             </div>
@@ -202,7 +205,48 @@ export default function AssignDriverCard({
         )
     }
 
-    // ── IN TRANSIT STATE ──
+    // ── IN TRANSIT STATE — confirm panel takeover ──
+    if (mode === 'transit' && confirmingOverride) {
+        return (
+            <div className="bg-white rounded-xl border-2 border-orange-300 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle size={14} className="text-orange-600" />
+                    <span className="text-[14px] font-semibold text-orange-900 flex-1">Manager override</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700">
+                        CONFIRM
+                    </span>
+                </div>
+
+                <div className="bg-orange-50 border border-orange-100 rounded-lg p-3 mb-3">
+                    <div className="text-[13px] font-semibold text-orange-900 mb-1">
+                        Mark as delivered?
+                    </div>
+                    <div className="text-[11px] text-orange-700 leading-relaxed">
+                        This bypasses driver confirmation. Use only if {alreadyAssignedDriverName?.split(' ')[0] || 'the driver'} cannot mark this delivered from their app.
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setConfirmingOverride(false)}
+                        disabled={busy}
+                        className="flex-1 py-2 rounded-lg bg-white text-gray-700 border border-gray-300 text-[12px] font-semibold hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onMarkDelivered}
+                        disabled={busy}
+                        className="flex-[1.4] py-2 rounded-lg bg-orange-600 text-white text-[12px] font-semibold hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                    >
+                        {markingDelivered ? 'Marking...' : 'Yes, mark delivered'}
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // ── IN TRANSIT STATE — normal view with override link ──
     if (mode === 'transit') {
         return (
             <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -214,7 +258,7 @@ export default function AssignDriverCard({
                     </span>
                 </div>
 
-                <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-100 rounded-lg">
+                <div className="flex items-center gap-3 p-3 bg-purple-50 border border-purple-100 rounded-lg mb-3">
                     <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center text-[12px] font-bold text-purple-700 flex-shrink-0">
                         {initials(alreadyAssignedDriverName || '')}
                     </div>
@@ -226,6 +270,24 @@ export default function AssignDriverCard({
                             <MapPin size={10} />
                             Out for delivery
                         </div>
+                    </div>
+                </div>
+
+                {/* Manager override — small, de-emphasized */}
+                <div className="border-t border-dashed border-gray-200 pt-3 mt-3">
+                    <div className="text-[10px] text-gray-400 mb-1.5 text-center">
+                        Driver completes from their app
+                    </div>
+                    <button
+                        onClick={() => setConfirmingOverride(true)}
+                        disabled={busy}
+                        className="w-full py-1.5 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-800 text-[11px] font-medium transition-colors inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                        <AlertTriangle size={10} />
+                        Mark as delivered (override)
+                    </button>
+                    <div className="text-[9px] text-gray-400 text-center mt-1 leading-tight">
+                        Use only if driver cannot confirm
                     </div>
                 </div>
             </div>

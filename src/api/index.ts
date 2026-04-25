@@ -57,6 +57,13 @@ export const storeApi = {
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
+    // Manager override — mark PICKED_UP order as DELIVERED when driver
+    // cannot confirm from their app. Audit trail records this as an override.
+    markDelivered: async (id: string): Promise<Order> => {
+        const res = await api.put<ApiResponse<Order>>(`/store/orders/${id}/mark-delivered`)
+        if (!res.data.success || !res.data.data) throw new Error(res.data.message)
+        return res.data.data
+    },
     complete: async (id: string): Promise<Order> => {
         const res = await api.put<ApiResponse<Order>>(`/store/orders/${id}/complete`)
         if (!res.data.success || !res.data.data) throw new Error(res.data.message)

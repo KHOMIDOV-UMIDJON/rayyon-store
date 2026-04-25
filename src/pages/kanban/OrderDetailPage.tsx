@@ -108,6 +108,17 @@ export default function OrderDetailPage() {
             setToast({ message: err?.response?.data?.message ?? 'Failed', type: 'error' }),
     })
 
+    const markDeliveredMut = useMutation({
+        mutationFn: () => storeApi.markDelivered(orderId!),
+        onSuccess: () => {
+            invalidate()
+            setToast({ message: 'Order marked delivered (override)', type: 'success' })
+            setTimeout(() => navigate('/kanban'), 1000)
+        },
+        onError: (err: AxiosError<{ message: string }>) =>
+            setToast({ message: err?.response?.data?.message ?? 'Failed', type: 'error' }),
+    })
+
     if (isLoading) {
         return (
             <div className="flex flex-col flex-1 items-center justify-center text-[13px] text-gray-400">
@@ -131,8 +142,8 @@ export default function OrderDetailPage() {
     const isCreated = order.status === 'CREATED'
     const isPreparing = order.status === 'PREPARING'
 
-    // Show collector card from CONFIRMED onward (not at CREATED)
-    const showCollectorCard = !isCreated
+    // Show collector card from CONFIRMED onward (not at CREATED or ASSIGNED)
+    const showCollectorCard = order.status !== 'CREATED' && order.status !== 'ASSIGNED'
 
     // Driver card visible once order is READY_FOR_PICKUP and stays visible
     // through the rest of the lifecycle (assigned → in transit → done)
@@ -163,7 +174,7 @@ export default function OrderDetailPage() {
                 </button>
                 <div className="flex-1 min-w-0">
                     <div className="text-[14px] font-semibold text-gray-900">
-                        Order #{order.orderId.slice(0, 8)}
+                        Order #{order.orderId?.slice(0, 8) ?? '—'}
                     </div>
                     <div className="text-[11px] text-gray-400 mt-0.5">
                         {PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} · {fmtMoney(order.totalAmount)} UZS
@@ -175,7 +186,7 @@ export default function OrderDetailPage() {
                         (STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-500')
                     }
                 >
-                    {order.status.replace(/_/g, ' ')}
+                    {order.status?.replace(/_/g, ' ') ?? 'UNKNOWN'}
                 </span>
             </div>
 
@@ -213,8 +224,8 @@ export default function OrderDetailPage() {
                                 pickedCount={checkedCount}
                                 totalItems={totalItems}
                                 onAssign={(id) => assignCollectorMut.mutate(id)}
-                                onStartPreparing={() => prepareMut.mutate()}
-                                onMarkReady={() => readyMut.mutate()}
+                                onStartPreparing={() => prepareMut.mutate(undefined)}
+                                onMarkReady={() => readyMut.mutate(undefined)}
                                 assigning={assignCollectorMut.isPending}
                                 starting={prepareMut.isPending}
                                 markingReady={readyMut.isPending}
@@ -228,9 +239,11 @@ export default function OrderDetailPage() {
                                 alreadyAssignedDriverName={order.driverName}
                                 orderStatus={order.status}
                                 onAssignDriver={(id) => assignDriverMut.mutate(id)}
-                                onConfirmPickup={() => pickupMut.mutate()}
+                                onConfirmPickup={() => pickupMut.mutate(undefined)}
+                                onMarkDelivered={() => markDeliveredMut.mutate(undefined)}
                                 assigning={assignDriverMut.isPending}
                                 confirming={pickupMut.isPending}
+                                markingDelivered={markDeliveredMut.isPending}
                             />
                         )}
                     </div>
@@ -253,7 +266,7 @@ export default function OrderDetailPage() {
 
                         {isCreated && (
                             <button
-                                onClick={() => confirmMut.mutate()}
+                                onClick={() => confirmMut.mutate(undefined)}
                                 disabled={confirmMut.isPending}
                                 className="py-2.5 rounded-xl bg-brand text-white text-[12px] font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors"
                             >
