@@ -256,7 +256,7 @@ export default function KanbanPage() {
     ).length
 
     return (
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden min-h-0">
             <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 flex-shrink-0">
                 <div>
                     <h1 className="text-[15px] font-semibold text-gray-900">Live order board</h1>
@@ -275,7 +275,7 @@ export default function KanbanPage() {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 <div className="px-4 pt-4 flex-shrink-0">
                     <OrderFilterBar
                         filters={filters}
@@ -286,13 +286,13 @@ export default function KanbanPage() {
                     />
                 </div>
 
-                <div className="flex-1 overflow-hidden px-4 pb-4">
+                <div className="flex-1 min-h-0 px-4 pb-4 mt-4 overflow-x-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full text-[13px] text-gray-400">
                             Loading orders...
                         </div>
                     ) : (
-                        <div className="grid grid-cols-5 gap-3 h-full">
+                        <div className="grid grid-cols-5 gap-3 h-full min-w-[1200px]">
                             {COLUMNS.map(col => {
                                 const colOrders = filtered
                                     .filter(o => col.statuses.includes(o.status))
