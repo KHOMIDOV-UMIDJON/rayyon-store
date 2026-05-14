@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
     LayoutDashboard,
+    ListChecks,
     Package,
     Users,
     Store as StoreIcon,
@@ -104,6 +105,11 @@ export default function Sidebar() {
                         icon={<LayoutDashboard size={15} strokeWidth={2} />}
                         label="Live board"
                         livePulse={activeCount > 0}
+                    />
+                    <NavItem
+                        to="/orders"
+                        icon={<ListChecks size={15} strokeWidth={2} />}
+                        label="Orders"
                     />
                 </div>
 
