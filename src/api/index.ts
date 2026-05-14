@@ -1,5 +1,8 @@
 import api from '../lib/axios'
-import type { ApiResponse, AuthUser, Order, StoreInfo, StaffMember } from '../types'
+import type {
+    ApiResponse, AuthUser, Order, OrderSummary, OrdersQueryParams,
+    SpringPage, StoreInfo, StaffMember,
+} from '../types'
 
 export interface Driver {
     id: string
@@ -96,5 +99,39 @@ export const storeApi = {
         const res = await api.get<ApiResponse<Driver[]>>('/store/drivers')
         if (!res.data.success) throw new Error(res.data.message)
         return res.data.data ?? []
+    },
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDERS API — paginated search for the Orders page
+//
+// Always scoped to the caller's store on the backend (from JWT).
+// Never pass a storeId in params — it would be ignored anyway.
+// ─────────────────────────────────────────────────────────────
+export const ordersApi = {
+    search: async (
+        params: OrdersQueryParams,
+        page:   number,
+        size:   number,
+        sort:   string = 'createdAt,desc',
+    ): Promise<SpringPage<OrderSummary>> => {
+        // Strip undefined values so axios doesn't serialize them
+        // as empty query params (?status=&search=).
+        const clean: Record<string, string | number> = {}
+        for (const [key, value] of Object.entries(params)) {
+            if (value !== undefined && value !== '' && value !== null) {
+                clean[key] = value as string | number
+            }
+        }
+
+        const res = await api.get<ApiResponse<SpringPage<OrderSummary>>>(
+            '/store/orders/search',
+            { params: { ...clean, page, size, sort } },
+        )
+
+        if (!res.data.success || !res.data.data) {
+            throw new Error(res.data.message)
+        }
+        return res.data.data
     },
 }

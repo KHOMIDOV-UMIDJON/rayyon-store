@@ -124,3 +124,69 @@ export const EMPTY_FILTERS: OrderFilters = {
     driverId: '',
     urgency: '',
 }
+
+// ─────────────────────────────────────────────────────────────
+// SPRING PAGE — shape returned by every paginated endpoint
+// ─────────────────────────────────────────────────────────────
+export interface SpringPage<T> {
+    content:          T[]
+    totalElements:    number
+    totalPages:       number
+    size:             number
+    number:           number   // 0-indexed current page
+    first:            boolean
+    last:             boolean
+    numberOfElements: number
+    empty:            boolean
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDER SUMMARY — slim row for the Orders page table
+//
+// Mirrors backend's StoreOrderSummaryResponse exactly.
+// Use Order (heavyweight) for the detail page, OrderSummary
+// for the list/table.
+// ─────────────────────────────────────────────────────────────
+export interface OrderSummary {
+    orderId:         string
+    status:          OrderStatus
+    paymentMethod:   PaymentMethod
+    isPaid:          boolean
+    totalAmount:     number
+    customerName:    string | null
+    customerPhone:   string | null
+    deliveryAddress: string | null
+    driverName:      string | null
+    collectorName:   string | null
+    itemCount:       number
+    createdAt:       string
+    updatedAt:       string
+}
+
+// ─────────────────────────────────────────────────────────────
+// ORDERS QUERY PARAMS — drives GET /store/orders/search
+//
+// All fields optional. Backend ignores any field that's null
+// or undefined. storeId is intentionally NOT here — backend
+// always scopes to caller's storeId from the JWT.
+// ─────────────────────────────────────────────────────────────
+export interface OrdersQueryParams {
+    // Date range (YYYY-MM-DD)
+    from?:          string
+    to?:            string
+
+    // Status & payment
+    status?:        OrderStatus
+    paymentMethod?: PaymentMethod
+
+    // Staff
+    driverId?:      string
+    collectorId?:   string
+
+    // Free-text search (matches order ID prefix, name, phone, address)
+    search?:        string
+
+    // Amount range (UZS, integer)
+    minAmount?:     number
+    maxAmount?:     number
+}
