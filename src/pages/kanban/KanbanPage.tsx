@@ -286,53 +286,77 @@ export default function KanbanPage() {
                     />
                 </div>
 
-                <div className="flex-1 min-h-0 px-4 pb-4 mt-4 overflow-x-auto">
+                {/*
+                  Board layout — ONE shared scroll container.
+                  - Status header row is sticky to the top of the scroll area,
+                    so column titles stay visible as cards scroll under them.
+                  - Card grid below uses a 5-column grid, no per-column scroll.
+                  - The whole board scrolls vertically as one unit.
+                */}
+                <div className="flex-1 min-h-0 mt-4 overflow-y-auto">
                     {isLoading ? (
                         <div className="flex items-center justify-center h-full text-[13px] text-gray-400">
                             Loading orders...
                         </div>
                     ) : (
-                        <div className="grid grid-cols-5 gap-3 h-full min-w-[1200px]">
-                            {COLUMNS.map(col => {
-                                const colOrders = filtered
+                        (() => {
+                            // Compute per-column orders ONCE so we can reuse for headers + grid
+                            const columnsWithOrders = COLUMNS.map(col => ({
+                                ...col,
+                                orders: filtered
                                     .filter(o => col.statuses.includes(o.status))
-                                    .sort((a, b) => getWaitSeconds(b) - getWaitSeconds(a))
-                                return (
-                                    <div key={col.id} className="flex flex-col min-w-0 h-full">
-                                        <div
-                                            className="flex items-center justify-between px-3 py-2 rounded-xl mb-3 flex-shrink-0"
-                                            style={{ background: col.bg, border: `1px solid ${col.border}` }}
-                                        >
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
-                                                <span className="text-[12px] font-semibold truncate" style={{ color: col.color }}>
-                                                    {col.label}
+                                    .sort((a, b) => getWaitSeconds(b) - getWaitSeconds(a)),
+                            }))
+
+                            return (
+                                <>
+                                    {/* Sticky status header row */}
+                                    <div
+                                        className="grid grid-cols-5 gap-3 px-4 pt-1 pb-3 bg-white sticky top-0 z-10 min-w-[1200px]"
+                                    >
+                                        {columnsWithOrders.map(col => (
+                                            <div
+                                                key={col.id}
+                                                className="flex items-center justify-between px-3 py-2 rounded-xl"
+                                                style={{ background: col.bg, border: `1px solid ${col.border}` }}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: col.color }} />
+                                                    <span className="text-[12px] font-semibold truncate" style={{ color: col.color }}>
+                                                        {col.label}
+                                                    </span>
+                                                </div>
+                                                <span
+                                                    className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                                                    style={{ background: col.color + '20', color: col.color }}
+                                                >
+                                                    {col.orders.length}
                                                 </span>
                                             </div>
-                                            <span
-                                                className="text-[11px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
-                                                style={{ background: col.color + '20', color: col.color }}
-                                            >
-                                                {colOrders.length}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-col gap-2 overflow-y-auto flex-1 pb-2 min-h-0">
-                                            {colOrders.length === 0 ? (
-                                                <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-gray-100 text-[12px] text-gray-300">
-                                                    No orders
-                                                </div>
-                                            ) : (
-                                                colOrders.map(order => (
-                                                    <div key={order.orderId} onClick={() => navigate(`/kanban/${order.orderId}`)}>
-                                                        <OrderCard order={order} />
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
+                                        ))}
                                     </div>
-                                )
-                            })}
-                        </div>
+
+                                    {/* Card grid — single scroll, all columns scroll together */}
+                                    <div className="grid grid-cols-5 gap-3 px-4 pb-4 min-w-[1200px] items-start">
+                                        {columnsWithOrders.map(col => (
+                                            <div key={col.id} className="flex flex-col gap-2 min-w-0">
+                                                {col.orders.length === 0 ? (
+                                                    <div className="flex items-center justify-center h-24 rounded-xl border-2 border-dashed border-gray-100 text-[12px] text-gray-300">
+                                                        No orders
+                                                    </div>
+                                                ) : (
+                                                    col.orders.map(order => (
+                                                        <div key={order.orderId} onClick={() => navigate(`/kanban/${order.orderId}`)}>
+                                                            <OrderCard order={order} />
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )
+                        })()
                     )}
                 </div>
             </div>
