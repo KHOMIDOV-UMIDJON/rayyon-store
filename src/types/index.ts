@@ -84,14 +84,44 @@ export interface Order {
     waitSeconds?: number
 }
 
+// ─────────────────────────────────────────────────────────────
+// STORE INFO — full payload from GET /store/my
+//
+// Mirrors backend's StoreResponse. The "My store" page renders
+// all of these read-only. Optional fields may be null/undefined
+// if the admin hasn't configured them yet.
+// ─────────────────────────────────────────────────────────────
 export interface StoreInfo {
-    id: string
-    nameUz: string
-    address: string
-    city: string
-    phone: string
-    status: string
-    managerId: string
+    id:                  string
+    nameUz:              string
+    address:             string | null
+    city:                string | null
+    phone:               string | null
+    email:               string | null
+    status:              string     // 'ACTIVE' | 'COMING_SOON' | 'INACTIVE' | ...
+    managerId?:          string | null
+
+    // BigDecimal serializes as either number (Jackson default) or string
+    // — accept both at the type level, format at display time.
+    deliveryRadiusKm:    number | string | null
+    minimumOrderAmount:  number | string | null
+    deliveryFee:         number | string | null
+    freeDeliveryFrom:    number | string | null
+
+    workingHours:        StoreHours[] | null
+}
+
+// Backend's StoreResponse.StoreHoursResponse
+export interface StoreHours {
+    // Java DayOfWeek serializes as "MONDAY", "TUESDAY", ... "SUNDAY"
+    dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY'
+
+    // Boxed Boolean on the entity, may arrive as null in theory
+    isOpen:    boolean
+
+    // LocalTime serializes as "HH:mm:ss"
+    openTime:  string | null
+    closeTime: string | null
 }
 
 export interface StaffMember {
