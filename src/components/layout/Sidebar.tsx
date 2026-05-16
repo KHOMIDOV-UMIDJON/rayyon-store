@@ -5,6 +5,7 @@ import {
     ListChecks,
     Package,
     Users,
+    Settings,
     Store as StoreIcon,
     LogOut,
 } from 'lucide-react'
@@ -131,6 +132,11 @@ export default function Sidebar() {
                         to="/store"
                         icon={<StoreIcon size={15} strokeWidth={2} />}
                         label="My store"
+                    />
+                    <NavItem
+                        to="/settings"
+                        icon={<Settings size={15} strokeWidth={2} />}
+                        label="Settings"
                     />
                 </div>
             </nav>

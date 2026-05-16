@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout'
 import LoginPage from './pages/auth/LoginPage'
 import KanbanPage from './pages/kanban/KanbanPage'
 import OrdersPage from './pages/orders/OrdersPage'
+import SettingsPage from './pages/settings/SettingsPage'
 import OrderDetailPage from './pages/kanban/OrderDetailPage'
 import InventoryPage from './pages/inventory/InventoryPage'
 import StaffPage from './pages/staff/StaffPage'
@@ -18,6 +19,7 @@ export default function App() {
                     <Route path="kanban" element={<KanbanPage />} />
                     <Route path="kanban/:orderId" element={<OrderDetailPage />} />
                     <Route path="orders" element={<OrdersPage />} />
+                    <Route path="settings" element={<SettingsPage />} />
                     <Route path="inventory" element={<InventoryPage />} />
                     <Route path="staff" element={<StaffPage />} />
                     <Route path="store" element={<StorePage />} />
