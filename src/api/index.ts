@@ -1,7 +1,7 @@
 import api from '../lib/axios'
 import type {
     ApiResponse, AuthUser, Order, OrderSummary, OrdersQueryParams,
-    SpringPage, StoreInfo, StaffMember,
+    SpringPage, StoreInfo, StoreSettings, StaffMember,
 } from '../types'
 
 export interface Driver {
@@ -132,6 +132,30 @@ export const ordersApi = {
         if (!res.data.success || !res.data.data) {
             throw new Error(res.data.message)
         }
+        return res.data.data
+    },
+
+}
+
+// ─────────────────────────────────────────────────────────────
+// SETTINGS API — per-store configuration
+//
+// Always scoped to the caller's store on the backend (from JWT).
+// A store manager can only view/update their own store's settings.
+// ─────────────────────────────────────────────────────────────
+export const settingsApi = {
+    get: async (): Promise<StoreSettings> => {
+        const res = await api.get<ApiResponse<StoreSettings>>('/store/my/settings')
+        if (!res.data.success || !res.data.data) throw new Error(res.data.message)
+        return res.data.data
+    },
+
+    update: async (settings: StoreSettings): Promise<StoreSettings> => {
+        const res = await api.patch<ApiResponse<StoreSettings>>(
+            '/store/my/settings',
+            settings,
+        )
+        if (!res.data.success || !res.data.data) throw new Error(res.data.message)
         return res.data.data
     },
 }

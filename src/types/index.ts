@@ -190,3 +190,15 @@ export interface OrdersQueryParams {
     minAmount?:     number
     maxAmount?:     number
 }
+
+// ─────────────────────────────────────────────────────────────
+// STORE SETTINGS — current values from GET /store/my/settings
+// Updated via PATCH /store/my/settings.
+//
+// Mirrors backend's StoreSettingsResponse and the validated
+// payload of UpdateStoreSettingsRequest.
+// ─────────────────────────────────────────────────────────────
+export interface StoreSettings {
+    liveBoardResetHour:   number  // 0-23, Asia/Tashkent
+    liveBoardResetMinute: number  // 0-59
+}
